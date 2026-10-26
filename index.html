@@ -110,6 +110,35 @@ h1,h2{font-weight:400;margin:0;line-height:1.1}
 .pager .go{background:var(--c);border-color:var(--c);color:#fff}
 .pager button:disabled{opacity:.28;cursor:default}
 
+/* 소리 듣고 찾기 */
+.play{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:68px;margin-top:22px;border:0;border-radius:5px;background:var(--c);color:#fff;font-size:25px;box-shadow:3px 4px 0 var(--shadow)}
+.play svg{width:30px;height:30px;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.play:active{transform:scale(.98)}
+#game{max-width:460px;margin:0 auto;padding:16px 18px 32px}
+.listen{display:grid;place-items:center;width:132px;height:132px;margin:30px auto 0;padding:0;border:0;border-radius:50%;background:var(--c);color:#fff;box-shadow:4px 5px 0 var(--shadow)}
+.listen svg{width:60px;height:60px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.listen:active{transform:scale(.95)}
+.g-hint{margin:16px 0 0;text-align:center;color:var(--muted);font-size:18px}
+.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:28px}
+.pick{position:relative;display:grid;place-items:center;aspect-ratio:1;padding:8px;border:0;border-radius:5px;background:var(--c);box-shadow:3px 4px 0 var(--shadow);transition:transform .12s ease-out,opacity .2s}
+.pick .glyph{width:80%;height:auto;fill:#fff}
+.pick:active{transform:scale(.95)}
+.pick.wrong{opacity:.3;animation:shake .32s}
+.pick.right{transform:scale(1.06)}
+.pick .mini{position:absolute;right:-10px;bottom:-12px;width:56px;height:56px;transform:rotate(-14deg)}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.g-end{text-align:center;padding-top:40px}
+.g-end .gst{display:block;width:190px;height:190px;margin:0 auto;transform:rotate(-14deg)}
+.g-end .gst.on{animation:thunk .45s cubic-bezier(.2,1.5,.45,1) both}
+.g-score{margin:24px 0 0;font-size:24px;line-height:1.5}
+.g-acts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:30px}
+.g-acts button{min-height:60px;border-radius:14px;border:2px solid var(--btn-line);background:var(--btn);font-size:22px}
+.g-acts .main{background:var(--c);border-color:var(--c);color:#fff}
+
+@media (prefers-reduced-motion: reduce){
+  .pick.wrong,.g-end .gst.on{animation:none}
+}
+
 @media (prefers-reduced-motion: reduce){
   .big-stamp.on,.board.hit{animation:none}
   .card,.group,.pic span{transition:none}
@@ -147,6 +176,7 @@ h1,h2{font-weight:400;margin:0;line-height:1.1}
     </div>
     <div class="tally" id="gTally"><svg class="stamp-svg" viewBox="0 0 120 120" aria-hidden="true"><use href="#stamp" xlink:href="#stamp"/></svg><span id="gTallyNum"></span></div>
   </header>
+  <button class="play" id="playBtn" type="button"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>소리 듣고 찾기</button>
   <ol class="cards" id="cards"></ol>
 </section>
 
@@ -189,6 +219,28 @@ h1,h2{font-weight:400;margin:0;line-height:1.1}
       <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
     </button>
   </nav>
+</section>
+
+<section id="game" hidden>
+  <header class="head">
+    <button class="icon-btn" id="gameBack" type="button" aria-label="글자 목록으로">
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg>
+    </button>
+    <ol class="dots" id="gDots" aria-hidden="true"></ol>
+  </header>
+  <div id="gStage">
+    <button class="listen" id="listen" type="button" aria-label="다시 듣기"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></svg></button>
+    <p class="g-hint">소리를 듣고 맞는 글자를 눌러 보세요</p>
+    <div class="choices" id="choices"></div>
+  </div>
+  <div class="g-end" id="gEnd" hidden>
+    <svg class="gst stamp-svg" id="gStamp" viewBox="0 0 120 120" aria-hidden="true"><use href="#stamp" xlink:href="#stamp"/></svg>
+    <p class="g-score" id="gScore"></p>
+    <div class="g-acts">
+      <button class="main" id="again" type="button">한 번 더</button>
+      <button id="toList" type="button">글자 목록</button>
+    </div>
+  </div>
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7.3/dist/hanzi-writer.min.js"></script>
@@ -452,7 +504,7 @@ const stampUse = cls => '<svg class="' + cls + ' stamp-svg" viewBox="0 0 120 120
 const doneIn = g => g.items.filter(it => stamps.has(it.c)).length;
 
 function show(view) {
-  ['home', 'group', 'learn'].forEach(v => { $(v).hidden = v !== view; });
+  ['home', 'group', 'learn', 'game'].forEach(v => { $(v).hidden = v !== view; });
   window.scrollTo(0, 0);
 }
 
@@ -507,6 +559,7 @@ $('toHome').addEventListener('click', () => { stopAll(); renderHome(); show('hom
 function stopAll() {
   flow++;
   countRun++;
+  gameRun++;
   if (writer) { try { writer.cancelQuiz(); } catch (e) {} }
   cancelSpeech();
   stopClip();
@@ -656,6 +709,86 @@ function tapPic() {
     if (k === spans.length - 1) setTimeout(() => { if (run === countRun) s.classList.remove('pop'); }, 600);
   }, k * 760));
 }
+
+
+/* 소리 듣고 찾기 */
+let game = null;
+let gameRun = 0;
+function shuffle(a) {
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; }
+  return a;
+}
+function startGame() {
+  stopAll();
+  const items = GROUPS[gi].items;
+  const qs = shuffle(items).slice(0, Math.min(5, items.length)).map(it => ({
+    it, first: true, opts: shuffle([it].concat(shuffle(items.filter(x => x !== it)).slice(0, 2)))
+  }));
+  game = { qs, n: 0, score: 0 };
+  $('game').style.setProperty('--c', GROUPS[gi].color);
+  $('gEnd').hidden = true;
+  $('gStage').hidden = false;
+  show('game');
+  askQ();
+}
+function askQ() {
+  const run = ++gameRun, q = game.qs[game.n];
+  renderGDots();
+  $('choices').innerHTML = q.opts.map((it, k) =>
+    '<button class="pick" type="button" data-k="' + k + '" style="--c:' + it.color + '" aria-label="보기 ' + (k + 1) + '">' + glyph(it.c) + '</button>'
+  ).join('');
+  setTimeout(() => { if (run === gameRun) sayQ(); }, 350);
+}
+function sayQ() {
+  if (!game || game.n >= game.qs.length) return;
+  const it = game.qs[game.n].it;
+  say(it.c, it.hun + ', ' + it.eum);
+}
+function renderGDots() {
+  $('gDots').innerHTML = game.qs.map((q, i) =>
+    '<li class="' + (i < game.n ? (q.first ? 'done' : '') : '') + (i === game.n ? ' now' : '') + '"></li>'
+  ).join('');
+}
+$('choices').addEventListener('click', e => {
+  const b = e.target.closest('.pick');
+  if (!b || b.disabled || !game) return;
+  const q = game.qs[game.n], it = q.opts[+b.dataset.k], run = gameRun;
+  if (it === q.it) {
+    [...$('choices').children].forEach(x => { x.disabled = true; });
+    b.classList.add('right');
+    b.insertAdjacentHTML('beforeend', stampUse('mini'));
+    if (q.first) game.score++;
+    chime();
+    setTimeout(() => {
+      if (run !== gameRun) return;
+      game.n++;
+      if (game.n < game.qs.length) askQ(); else endGame();
+    }, 1300);
+  } else {
+    q.first = false;
+    b.disabled = true;
+    b.classList.add('wrong');
+    boop();
+    setTimeout(() => { if (run === gameRun) sayQ(); }, 550);
+  }
+});
+function endGame() {
+  gameRun++;
+  renderGDots();
+  $('gStage').hidden = true;
+  $('gEnd').hidden = false;
+  $('gScore').textContent = game.qs.length + '문제 중 ' + game.score + '개를 한 번에 맞혔어요';
+  const s = $('gStamp');
+  s.classList.remove('on'); void s.getBoundingClientRect(); s.classList.add('on');
+  setTimeout(() => say('praise', '참 잘했어요!'), 320);
+}
+function leaveGame() { stopAll(); game = null; renderGroup(); show('group'); }
+$('playBtn').addEventListener('click', startGame);
+$('listen').addEventListener('click', sayQ);
+$('again').addEventListener('click', startGame);
+$('toList').addEventListener('click', leaveGame);
+$('gameBack').addEventListener('click', leaveGame);
 
 $('toGroup').addEventListener('click', () => { stopAll(); renderGroup(); show('group'); });
 $('say').addEventListener('click', () => { const it = cur(); say(it.c, it.hun + ', ' + it.eum); });
